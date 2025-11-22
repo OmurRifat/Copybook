@@ -21,6 +21,7 @@ export const registerSchema = z.object({
 export const createPostSchema = z.object({
     content: z.string().min(1, 'Post content is required').max(5000, 'Post content is too long'),
     imageUrl: z.string().url('Invalid image URL').optional(),
+    isPublic: z.boolean().optional().default(true),
 });
 
 // Comment schemas

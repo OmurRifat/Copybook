@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { createCommentSchema } from '@/lib/validations';
 
 // POST /api/comments - Create a new comment
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
     try {
         const session = await getServerSession(authOptions);
 
@@ -21,7 +22,8 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { content, postId, parentId } = body;
+        const validatedData = createCommentSchema.parse(body);
+        const { content, postId, parentId } = validatedData;
 
         if (!content || content.trim().length === 0) {
             return NextResponse.json({ error: 'Content is required' }, { status: 400 });

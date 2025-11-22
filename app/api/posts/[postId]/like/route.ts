@@ -44,10 +44,6 @@ export async function POST(
 
         return NextResponse.json({ success: true, like }, { status: 201 });
     } catch (error: any) {
-        // Handle unique constraint violation (already liked)
-        if (error.code === 'P2002') {
-            return NextResponse.json({ error: 'Already liked' }, { status: 400 });
-        }
         console.error('Error liking post:', error);
         return NextResponse.json({ error: 'Failed to like post' }, { status: 500 });
     }
