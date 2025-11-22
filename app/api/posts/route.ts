@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-// GET /api/posts - Fetch all posts (public + user's private posts)
+// GET /api/posts - Fetch all posts (public + user's private posts) with pagination
 export async function GET(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
@@ -20,14 +20,27 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        // Fetch all public posts + user's own private posts
+        // Get pagination params from query string
+        const { searchParams } = new URL(request.url);
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const cursor = searchParams.get('cursor'); // Post ID to start after
+
+        // Build where clause
+        const whereClause: any = {
+            OR: [
+                { isPublic: true },
+                { userId: user.id, isPublic: false }
+            ]
+        };
+
+        // Add cursor condition if provided
+        if (cursor) {
+            whereClause.id = { lt: cursor }; // Get posts with ID less than cursor (older posts)
+        }
+
+        // Fetch posts with pagination
         const posts = await prisma.post.findMany({
-            where: {
-                OR: [
-                    { isPublic: true },
-                    { userId: user.id, isPublic: false }
-                ]
-            },
+            where: whereClause,
             include: {
                 user: {
                     select: {
@@ -46,10 +59,20 @@ export async function GET(request: NextRequest) {
             },
             orderBy: {
                 createdAt: 'desc'
-            }
+            },
+            take: limit + 1 // Fetch one extra to determine if there are more
         });
 
-        return NextResponse.json(posts);
+        // Check if there are more posts
+        const hasMore = posts.length > limit;
+        const returnPosts = hasMore ? posts.slice(0, limit) : posts;
+        const nextCursor = hasMore ? returnPosts[returnPosts.length - 1].id : null;
+
+        return NextResponse.json({
+            posts: returnPosts,
+            hasMore,
+            nextCursor
+        });
     } catch (error) {
         console.error('Error fetching posts:', error);
         return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 });

@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, memo } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import Modal from './Modal';
 
-export default function PostCard({ post }: { post: any }) {
+function PostCard({ post }: { post: any }) {
     const { data: session } = useSession();
     const [showDropdown, setShowDropdown] = useState(false);
 
     // Like state
-    const [liked, setLiked] = useState(false); // In a real app, we'd check if user liked from API
+    const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(post._count?.likes || 0);
     const [isLiking, setIsLiking] = useState(false);
 
@@ -26,7 +26,7 @@ export default function PostCard({ post }: { post: any }) {
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [commentCount, setCommentCount] = useState(post._count?.comments || 0);
-    const [replyingTo, setReplyingTo] = useState<string | null>(null); // ID of comment being replied to
+    const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
     const handleLike = async () => {
         if (isLiking) return;
@@ -45,13 +45,11 @@ export default function PostCard({ post }: { post: any }) {
             });
 
             if (!response.ok) {
-                // Revert on failure
                 setLiked(previousLiked);
                 setLikeCount(previousCount);
             }
         } catch (error) {
             console.error('Error toggling like:', error);
-            // Revert on error
             setLiked(previousLiked);
             setLikeCount(previousCount);
         } finally {
@@ -82,7 +80,7 @@ export default function PostCard({ post }: { post: any }) {
     };
 
     const fetchComments = async () => {
-        if (comments.length > 0) return; // Already fetched
+        if (comments.length > 0) return;
 
         setIsLoadingComments(true);
         try {
@@ -123,11 +121,10 @@ export default function PostCard({ post }: { post: any }) {
 
             if (response.ok) {
                 const newComment = await response.json();
-                // Add new comment to the top of the list
                 setComments([newComment, ...comments]);
                 setCommentContent('');
                 setCommentCount(commentCount + 1);
-                setReplyingTo(null); // Reset reply state
+                setReplyingTo(null);
             }
         } catch (error) {
             console.error('Error creating comment:', error);
@@ -167,7 +164,6 @@ export default function PostCard({ post }: { post: any }) {
                                 </svg>
                             </button>
                         </div>
-                        {/* Dropdown */}
                         {showDropdown && (
                             <div className="_feed_timeline_dropdown _timeline_dropdown show">
                                 <ul className="_feed_timeline_dropdown_list">
@@ -215,7 +211,6 @@ export default function PostCard({ post }: { post: any }) {
                 )}
             </div>
 
-            {/* Total Reacts */}
             <div className="_feed_inner_timeline_total_reacts _padd_r24 _padd_l24 _mar_b26">
                 <div className="_feed_inner_timeline_total_reacts_image">
                     <img src="/images/react_img1.png" alt="Image" className="_react_img1" />
@@ -239,7 +234,6 @@ export default function PostCard({ post }: { post: any }) {
                 </div>
             </div>
 
-            {/* Reaction Buttons */}
             <div className="_feed_inner_timeline_reaction">
                 <button
                     className={`_feed_inner_timeline_reaction_emoji _feed_reaction ${liked ? '_feed_reaction_active' : ''}`}
@@ -284,7 +278,6 @@ export default function PostCard({ post }: { post: any }) {
                 </button>
             </div>
 
-            {/* Comment Area */}
             {showComments && (
                 <>
                     <div className="_feed_inner_timeline_cooment_area">
@@ -329,7 +322,6 @@ export default function PostCard({ post }: { post: any }) {
                         </div>
                     </div>
 
-                    {/* Comments List */}
                     <div className="_timline_comment_main">
                         {isLoadingComments ? (
                             <div className="text-center p-3">Loading comments...</div>
@@ -339,7 +331,7 @@ export default function PostCard({ post }: { post: any }) {
                                     <div key={comment.id} className="_feed_inner_comment_box_content _mar_b16" style={{
                                         alignItems: 'flex-start',
                                         marginBottom: '16px',
-                                        marginLeft: comment.parentId ? '40px' : '0' // Simple nesting visual
+                                        marginLeft: comment.parentId ? '40px' : '0'
                                     }}>
                                         <div className="_feed_inner_comment_box_content_image">
                                             <img src={comment.user?.image || "/images/user.png"} alt="" className="_comment_img" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
@@ -366,7 +358,6 @@ export default function PostCard({ post }: { post: any }) {
                 </>
             )}
 
-            {/* Likes Modal */}
             <Modal
                 isOpen={showLikesModal}
                 onClose={() => setShowLikesModal(false)}
@@ -398,3 +389,5 @@ export default function PostCard({ post }: { post: any }) {
         </div>
     );
 }
+
+export default memo(PostCard);

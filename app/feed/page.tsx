@@ -1,68 +1,127 @@
-import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
+'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import LeftSidebar from '@/components/LeftSidebar';
 import RightSidebar from '@/components/RightSidebar';
 import CreatePost from '@/components/CreatePost';
 import PostCard from '@/components/PostCard';
+import ScrollToTop from '@/components/ScrollToTop';
 
-import { cookies } from 'next/headers';
+export default function FeedPage() {
+    const { data: session, status } = useSession();
+    const router = useRouter();
+    const [posts, setPosts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-async function getPosts() {
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session) return [];
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.push('/login');
+        }
+    }, [status, router]);
 
-        const cookieStore = await cookies();
+    // Fetch initial posts
+    useEffect(() => {
+        if (status === 'authenticated') {
+            fetchPosts(true);
+        }
+    }, [status]);
 
-        const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/posts`, {
-            cache: 'no-store',
-            headers: {
-                Cookie: cookieStore.toString()
-            }
-        });
-
-        if (!response.ok) {
-            console.error('Failed to fetch posts');
-            return [];
+    const fetchPosts = useCallback(async (isInitial = false) => {
+        if (isInitial) {
+            setLoading(true);
+        } else {
+            setLoadingMore(true);
         }
 
-        return response.json();
-    } catch (error) {
-        console.error('Error fetching posts:', error);
-        return [];
-    }
-}
-
-export default async function FeedPage() {
-    const session = await getServerSession(authOptions);
-
-    // Redirect to login if not authenticated
-    if (!session) {
-        redirect('/login');
-    }
-
-    const posts = await getPosts();
-
-    // Mock data for demonstration
-    const mockPosts = [
-        {
-            id: '1',
-            user: {
-                firstName: 'Karim',
-                lastName: 'Saif',
-            },
-            content: '-Healthy Tracking App',
-            imageUrl: '/images/timeline_img.png',
-            isPublic: true,
-            createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-            _count: {
-                likes: 9,
-                comments: 12
+        try {
+            const url = new URL('/api/posts', window.location.origin);
+            url.searchParams.set('limit', '10');
+            if (!isInitial && nextCursor) {
+                url.searchParams.set('cursor', nextCursor);
             }
-        },
-    ];
+
+            const response = await fetch(url.toString());
+            if (!response.ok) {
+                throw new Error('Failed to fetch posts');
+            }
+
+            const data = await response.json();
+
+            if (isInitial) {
+                setPosts(data.posts || []);
+            } else {
+                setPosts(prev => [...prev, ...(data.posts || [])]);
+            }
+
+            setHasMore(data.hasMore || false);
+            setNextCursor(data.nextCursor || null);
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+        }
+    }, [nextCursor]);
+
+    // Set up Intersection Observer for infinite scroll
+    useEffect(() => {
+        if (!hasMore || loadingMore) return;
+
+        const options = {
+            root: null, // Will observe within viewport
+            rootMargin: '200px', // Trigger 200px before reaching sentinel
+            threshold: 0.1
+        };
+
+        observerRef.current = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && hasMore && !loadingMore) {
+                fetchPosts(false);
+            }
+        }, options);
+
+        if (sentinelRef.current) {
+            observerRef.current.observe(sentinelRef.current);
+        }
+
+        return () => {
+            if (observerRef.current) {
+                observerRef.current.disconnect();
+            }
+        };
+    }, [hasMore, loadingMore, fetchPosts]);
+
+    // Handle new post creation
+    const handleNewPost = () => {
+        fetchPosts(true); // Refresh feed
+    };
+
+    if (status === 'loading' || loading) {
+        return (
+            <div className="_layout _layout_main_wrapper">
+                <div className="_main_layout">
+                    <Header />
+                    <div className="container _custom_container">
+                        <div style={{ textAlign: 'center', padding: '50px' }}>
+                            <p>Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!session) {
+        return null;
+    }
 
     return (
         <div className="_layout _layout_main_wrapper">
@@ -150,12 +209,53 @@ export default async function FeedPage() {
                                         </div>
 
                                         {/* Create Post */}
-                                        <CreatePost />
+                                        <CreatePost key={posts.length} />
 
                                         {/* Posts */}
-                                        {(posts.length > 0 ? posts : mockPosts).map((post: any) => (
+                                        {posts.map((post: any) => (
                                             <PostCard key={post.id} post={post} />
                                         ))}
+
+                                        {/* Loading More Indicator */}
+                                        {loadingMore && (
+                                            <div style={{ textAlign: 'center', padding: '20px' }}>
+                                                <div style={{
+                                                    display: 'inline-block',
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    border: '4px solid #f3f3f3',
+                                                    borderTop: '4px solid #1890FF',
+                                                    borderRadius: '50%',
+                                                    animation: 'spin 1s linear infinite'
+                                                }}></div>
+                                            </div>
+                                        )}
+
+                                        {/* No More Posts Message */}
+                                        {!hasMore && posts.length > 0 && (
+                                            <div style={{
+                                                textAlign: 'center',
+                                                padding: '30px',
+                                                color: '#999',
+                                                fontSize: '14px'
+                                            }}>
+                                                🎉 You're all caught up!
+                                            </div>
+                                        )}
+
+                                        {/* Empty State */}
+                                        {!loading && posts.length === 0 && (
+                                            <div style={{
+                                                textAlign: 'center',
+                                                padding: '50px',
+                                                color: '#999'
+                                            }}>
+                                                <p>No posts yet. Be the first to share something!</p>
+                                            </div>
+                                        )}
+
+                                        {/* Sentinel Element for Infinite Scroll */}
+                                        <div ref={sentinelRef} style={{ height: '1px' }}></div>
                                     </div>
                                 </div>
                             </div>
@@ -168,6 +268,17 @@ export default async function FeedPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Scroll to Top Button */}
+            <ScrollToTop />
+
+            {/* Add spinner animation */}
+            <style jsx>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 }
