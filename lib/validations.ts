@@ -28,7 +28,7 @@ export const createPostSchema = z.object({
 export const createCommentSchema = z.object({
     content: z.string().min(1, 'Comment cannot be empty').max(1000, 'Comment is too long'),
     postId: z.string().cuid('Invalid post ID'),
-    parentId: z.string().cuid('Invalid parent ID').optional(),
+    parentId: z.string().cuid('Invalid parent ID').nullish(),
 });
 
 // Type exports

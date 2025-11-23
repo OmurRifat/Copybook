@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { createPostSchema } from '@/lib/validations';
 
 // GET /api/posts - Fetch all posts (public + user's private posts) with pagination
 export async function GET(request: NextRequest) {
@@ -97,7 +98,8 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { content, imageUrl, isPublic = true } = body;
+        const validatedData = createPostSchema.parse(body);
+        const { content, imageUrl, isPublic = true } = validatedData;
 
         if (!content || content.trim().length === 0) {
             return NextResponse.json({ error: 'Content is required' }, { status: 400 });

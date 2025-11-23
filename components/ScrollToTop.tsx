@@ -6,41 +6,39 @@ export default function ScrollToTop() {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        const toggleVisibility = () => {
-            // Check scroll position - works for both window and containers
-            const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+        let timeoutId: NodeJS.Timeout;
 
-            if (scrollY > 300) {
-                setIsVisible(true);
-            } else {
-                setIsVisible(false);
-            }
+        const handleScroll = () => {
+            // Clear any existing timeout
+            clearTimeout(timeoutId);
+
+            // Debounce scroll event for better performance
+            timeoutId = setTimeout(() => {
+                const scrolled = window.pageYOffset || document.documentElement.scrollTop;
+                setIsVisible(scrolled > 500);
+            }, 100);
         };
 
-        // Listen to window scroll
-        window.addEventListener('scroll', toggleVisibility, { passive: true });
+        window.addEventListener('scroll', handleScroll, { passive: true });
 
-        // Also check on mount
-        toggleVisibility();
+        // Check initial state
+        handleScroll();
 
-        return () => window.removeEventListener('scroll', toggleVisibility);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            clearTimeout(timeoutId);
+        };
     }, []);
 
     const scrollToTop = () => {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    if (!isVisible) {
-        return null;
-    }
+    if (!isVisible) return null;
 
     return (
         <button
             onClick={scrollToTop}
-            className="_scroll_to_top_btn"
             aria-label="Scroll to top"
             style={{
                 position: 'fixed',

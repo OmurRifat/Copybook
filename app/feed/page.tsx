@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
@@ -18,8 +18,8 @@ export default function FeedPage() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
-    const observerRef = useRef<IntersectionObserver | null>(null);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
+
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -35,7 +35,9 @@ export default function FeedPage() {
         }
     }, [status]);
 
-    const fetchPosts = useCallback(async (isInitial = false) => {
+    const fetchPosts = async (isInitial = false) => {
+        console.log(`📡 Fetching posts - isInitial: ${isInitial}, cursor: ${nextCursor}`);
+
         if (isInitial) {
             setLoading(true);
         } else {
@@ -49,12 +51,18 @@ export default function FeedPage() {
                 url.searchParams.set('cursor', nextCursor);
             }
 
+            console.log('🌐 Fetching from:', url.toString());
             const response = await fetch(url.toString());
             if (!response.ok) {
                 throw new Error('Failed to fetch posts');
             }
 
             const data = await response.json();
+            console.log('📦 Received data:', {
+                postsCount: data.posts?.length,
+                hasMore: data.hasMore,
+                nextCursor: data.nextCursor
+            });
 
             if (isInitial) {
                 setPosts(data.posts || []);
@@ -65,39 +73,49 @@ export default function FeedPage() {
             setHasMore(data.hasMore || false);
             setNextCursor(data.nextCursor || null);
         } catch (error) {
-            console.error('Error fetching posts:', error);
+            console.error('❌ Error fetching posts:', error);
         } finally {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [nextCursor]);
+    };
 
     // Set up Intersection Observer for infinite scroll
     useEffect(() => {
-        if (!hasMore || loadingMore) return;
+        console.log('🔍 IntersectionObserver setup:', { hasMore, loadingMore, nextCursor, sentinelExists: !!sentinelRef.current });
 
-        const options = {
-            root: null, // Will observe within viewport
-            rootMargin: '200px', // Trigger 200px before reaching sentinel
-            threshold: 0.1
-        };
-
-        observerRef.current = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && hasMore && !loadingMore) {
-                fetchPosts(false);
-            }
-        }, options);
-
-        if (sentinelRef.current) {
-            observerRef.current.observe(sentinelRef.current);
+        if (!hasMore || loadingMore || !sentinelRef.current) {
+            console.log('⚠️ Skipping observer setup:', { hasMore, loadingMore, hasSentinel: !!sentinelRef.current });
+            return;
         }
 
-        return () => {
-            if (observerRef.current) {
-                observerRef.current.disconnect();
+        console.log('✅ Creating new observer...');
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                console.log('👁️ Observer triggered:', entries[0].isIntersecting, { hasMore, loadingMore });
+                if (entries[0].isIntersecting && hasMore && !loadingMore) {
+                    console.log('🚀 Fetching more posts...');
+                    fetchPosts(false);
+                }
+            },
+            {
+                root: null,
+                rootMargin: '100px',
+                threshold: 0.1
             }
+        );
+
+        observer.observe(sentinelRef.current);
+        console.log('👀 Observer observing sentinel');
+
+        return () => {
+            console.log('🧹 Cleaning up observer');
+            observer.disconnect();
         };
-    }, [hasMore, loadingMore, fetchPosts]);
+    }, [hasMore, loadingMore, nextCursor]); // Only depend on state, not functions
+
+
 
     // Handle new post creation
     const handleNewPost = () => {
@@ -255,7 +273,19 @@ export default function FeedPage() {
                                         )}
 
                                         {/* Sentinel Element for Infinite Scroll */}
-                                        <div ref={sentinelRef} style={{ height: '1px' }}></div>
+                                        <div
+                                            ref={sentinelRef}
+                                            style={{
+                                                height: '20px',
+                                                backgroundColor: 'rgba(255,0,0,0.1)',
+                                                margin: '20px 0',
+                                                textAlign: 'center',
+                                                fontSize: '12px',
+                                                color: '#999'
+                                            }}
+                                        >
+                                            {hasMore ? '⬇️ Scroll for more' : ''}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
