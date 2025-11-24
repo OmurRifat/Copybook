@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
+import CommonLoader from '@/components/CommonLoader';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -180,7 +181,7 @@ export default function RegisterPage() {
                                         <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
                                             <div className="_social_registration_form_btn _mar_t40 _mar_b60">
                                                 <button type="submit" className="_social_registration_form_btn_link _btn1" disabled={loading}>
-                                                    {loading ? 'Creating account...' : 'Register now'}
+                                                    {loading ? <CommonLoader text='Register' /> : 'Register'}
                                                 </button>
                                             </div>
                                         </div>

@@ -1,4 +1,5 @@
 import { Providers } from "@/components/providers";
+import "./animations.css";
 
 export default function RootLayout({
     children,

@@ -8,7 +8,7 @@ import LeftSidebar from '@/components/LeftSidebar';
 import RightSidebar from '@/components/RightSidebar';
 import CreatePost from '@/components/CreatePost';
 import PostCard from '@/components/PostCard';
-import ScrollToTop from '@/components/ScrollToTop';
+import CommonLoader from '@/components/CommonLoader';
 
 export default function FeedPage() {
     const { data: session, status } = useSession();
@@ -18,17 +18,16 @@ export default function FeedPage() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
 
-    // Redirect if not authenticated
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login');
         }
     }, [status, router]);
 
-    // Fetch initial posts
     useEffect(() => {
         if (status === 'authenticated') {
             fetchPosts(true);
@@ -36,8 +35,6 @@ export default function FeedPage() {
     }, [status]);
 
     const fetchPosts = async (isInitial = false) => {
-        console.log(`📡 Fetching posts - isInitial: ${isInitial}, cursor: ${nextCursor}`);
-
         if (isInitial) {
             setLoading(true);
         } else {
@@ -51,18 +48,12 @@ export default function FeedPage() {
                 url.searchParams.set('cursor', nextCursor);
             }
 
-            console.log('🌐 Fetching from:', url.toString());
             const response = await fetch(url.toString());
             if (!response.ok) {
                 throw new Error('Failed to fetch posts');
             }
 
             const data = await response.json();
-            console.log('📦 Received data:', {
-                postsCount: data.posts?.length,
-                hasMore: data.hasMore,
-                nextCursor: data.nextCursor
-            });
 
             if (isInitial) {
                 setPosts(data.posts || []);
@@ -73,29 +64,21 @@ export default function FeedPage() {
             setHasMore(data.hasMore || false);
             setNextCursor(data.nextCursor || null);
         } catch (error) {
-            console.error('❌ Error fetching posts:', error);
+            console.error('Error fetching posts:', error);
         } finally {
             setLoading(false);
             setLoadingMore(false);
         }
     };
 
-    // Set up Intersection Observer for infinite scroll
     useEffect(() => {
-        console.log('🔍 IntersectionObserver setup:', { hasMore, loadingMore, nextCursor, sentinelExists: !!sentinelRef.current });
-
         if (!hasMore || loadingMore || !sentinelRef.current) {
-            console.log('⚠️ Skipping observer setup:', { hasMore, loadingMore, hasSentinel: !!sentinelRef.current });
             return;
         }
 
-        console.log('✅ Creating new observer...');
-
         const observer = new IntersectionObserver(
             (entries) => {
-                console.log('👁️ Observer triggered:', entries[0].isIntersecting, { hasMore, loadingMore });
                 if (entries[0].isIntersecting && hasMore && !loadingMore) {
-                    console.log('🚀 Fetching more posts...');
                     fetchPosts(false);
                 }
             },
@@ -107,19 +90,41 @@ export default function FeedPage() {
         );
 
         observer.observe(sentinelRef.current);
-        console.log('👀 Observer observing sentinel');
 
         return () => {
-            console.log('🧹 Cleaning up observer');
             observer.disconnect();
         };
-    }, [hasMore, loadingMore, nextCursor]); // Only depend on state, not functions
+    }, [hasMore, loadingMore, nextCursor]);
 
 
 
-    // Handle new post creation
-    const handleNewPost = () => {
-        fetchPosts(true); // Refresh feed
+
+
+    const handleRefresh = async () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setIsRefreshing(true);
+
+        try {
+            const url = new URL('/api/posts', window.location.origin);
+            url.searchParams.set('limit', '10');
+
+            const response = await fetch(url.toString());
+            if (response.ok) {
+                const data = await response.json();
+                setPosts(data.posts || []);
+                setHasMore(data.hasMore || false);
+                setNextCursor(data.nextCursor || null);
+            }
+        } catch (error) {
+            console.error('Error refreshing posts:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    const handlePostCreated = (newPost: any) => {
+        setPosts(prevPosts => [newPost, ...prevPosts]);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     if (status === 'loading' || loading) {
@@ -166,7 +171,7 @@ export default function FeedPage() {
 
             <div className="_main_layout">
                 {/* Header */}
-                <Header />
+                <Header onHomeClick={handleRefresh} />
 
                 {/* Main Layout Structure */}
                 <div className="container _custom_container">
@@ -227,65 +232,66 @@ export default function FeedPage() {
                                         </div>
 
                                         {/* Create Post */}
-                                        <CreatePost key={posts.length} />
+                                        <CreatePost key={posts.length} onPostCreated={handlePostCreated} />
 
-                                        {/* Posts */}
-                                        {posts.map((post: any) => (
-                                            <PostCard key={post.id} post={post} />
-                                        ))}
-
-                                        {/* Loading More Indicator */}
-                                        {loadingMore && (
-                                            <div style={{ textAlign: 'center', padding: '20px' }}>
-                                                <div style={{
-                                                    display: 'inline-block',
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    border: '4px solid #f3f3f3',
-                                                    borderTop: '4px solid #1890FF',
-                                                    borderRadius: '50%',
-                                                    animation: 'spin 1s linear infinite'
-                                                }}></div>
-                                            </div>
-                                        )}
-
-                                        {/* No More Posts Message */}
-                                        {!hasMore && posts.length > 0 && (
+                                        {/* Refreshing Loader */}
+                                        {isRefreshing ? (
                                             <div style={{
-                                                textAlign: 'center',
-                                                padding: '30px',
-                                                color: '#999',
-                                                fontSize: '14px'
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                padding: '60px 20px',
+                                                minHeight: '300px'
                                             }}>
-                                                🎉 You're all caught up!
+                                                <CommonLoader size="32" color="#1890FF" text="Refreshing feed..." />
                                             </div>
-                                        )}
+                                        ) : (
+                                            <>
+                                                {/* Posts */}
+                                                {posts.map((post: any) => (
+                                                    <PostCard key={post.id} post={post} />
+                                                ))}
 
-                                        {/* Empty State */}
-                                        {!loading && posts.length === 0 && (
-                                            <div style={{
-                                                textAlign: 'center',
-                                                padding: '50px',
-                                                color: '#999'
-                                            }}>
-                                                <p>No posts yet. Be the first to share something!</p>
-                                            </div>
-                                        )}
 
-                                        {/* Sentinel Element for Infinite Scroll */}
-                                        <div
-                                            ref={sentinelRef}
-                                            style={{
-                                                height: '20px',
-                                                backgroundColor: 'rgba(255,0,0,0.1)',
-                                                margin: '20px 0',
-                                                textAlign: 'center',
-                                                fontSize: '12px',
-                                                color: '#999'
-                                            }}
-                                        >
-                                            {hasMore ? '⬇️ Scroll for more' : ''}
-                                        </div>
+
+                                                {/* No More Posts Message */}
+                                                {!hasMore && posts.length > 0 && (
+                                                    <div style={{
+                                                        textAlign: 'center',
+                                                        padding: '30px',
+                                                        color: '#999',
+                                                        fontSize: '14px'
+                                                    }}>
+                                                        🎉 You're all caught up!
+                                                    </div>
+                                                )}
+
+                                                {/* Empty State */}
+                                                {!loading && posts.length === 0 && (
+                                                    <div style={{
+                                                        textAlign: 'center',
+                                                        padding: '50px',
+                                                        color: '#999'
+                                                    }}>
+                                                        <p>No posts yet. Be the first to share something!</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Sentinel Element for Infinite Scroll */}
+                                                <div
+                                                    ref={sentinelRef}
+                                                    style={{
+                                                        height: '60px',
+                                                        margin: '20px 0',
+                                                        display: 'flex',
+                                                        justifyContent: 'center',
+                                                        alignItems: 'center'
+                                                    }}
+                                                >
+                                                    {hasMore && <CommonLoader size="24" color="#1890FF" />}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -299,16 +305,6 @@ export default function FeedPage() {
                 </div>
             </div>
 
-            {/* Scroll to Top Button */}
-            <ScrollToTop />
-
-            {/* Add spinner animation */}
-            <style jsx>{`
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            `}</style>
         </div>
     );
 }

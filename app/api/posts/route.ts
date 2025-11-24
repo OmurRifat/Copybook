@@ -56,6 +56,14 @@ export async function GET(request: NextRequest) {
                         likes: true,
                         comments: true
                     }
+                },
+                likes: {
+                    where: {
+                        userId: user.id
+                    },
+                    select: {
+                        userId: true
+                    }
                 }
             },
             orderBy: {
@@ -66,8 +74,16 @@ export async function GET(request: NextRequest) {
 
         // Check if there are more posts
         const hasMore = posts.length > limit;
-        const returnPosts = hasMore ? posts.slice(0, limit) : posts;
-        const nextCursor = hasMore ? returnPosts[returnPosts.length - 1].id : null;
+        const rawPosts = hasMore ? posts.slice(0, limit) : posts;
+        const nextCursor = hasMore ? rawPosts[rawPosts.length - 1].id : null;
+
+        const returnPosts = rawPosts.map((post) => {
+            const { likes, ...postData } = post;
+            return {
+                ...postData,
+                isLikedByCurrentUser: likes.length > 0
+            };
+        });
 
         return NextResponse.json({
             posts: returnPosts,

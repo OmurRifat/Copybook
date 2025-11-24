@@ -6,6 +6,7 @@ export const loginSchema = z.object({
     password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+// Register schema
 export const registerSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
@@ -20,7 +21,7 @@ export const registerSchema = z.object({
 // Post schemas
 export const createPostSchema = z.object({
     content: z.string().min(1, 'Post content is required').max(5000, 'Post content is too long'),
-    imageUrl: z.string().url('Invalid image URL').optional(),
+    imageUrl: z.string().url('Invalid image URL').or(z.literal('')).optional(),
     isPublic: z.boolean().optional().default(true),
 });
 

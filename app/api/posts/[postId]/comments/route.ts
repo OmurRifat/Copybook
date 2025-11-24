@@ -17,6 +17,15 @@ export async function GET(
 
         const { postId } = params;
 
+        // Get current user
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email }
+        });
+
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
         const comments = await prisma.comment.findMany({
             where: { postId },
             include: {
@@ -33,14 +42,30 @@ export async function GET(
                         likes: true,
                         replies: true
                     }
+                },
+                likes: {
+                    where: {
+                        userId: user.id
+                    },
+                    select: {
+                        userId: true
+                    }
                 }
             },
             orderBy: {
-                createdAt: 'desc'
+                createdAt: 'asc'
             }
         });
 
-        return NextResponse.json(comments);
+        const commentsWithLikeStatus = comments.map((comment) => {
+            const { likes, ...commentData } = comment;
+            return {
+                ...commentData,
+                isLikedByCurrentUser: likes.length > 0
+            };
+        });
+
+        return NextResponse.json(commentsWithLikeStatus);
     } catch (error) {
         console.error('Error fetching comments:', error);
         return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 });

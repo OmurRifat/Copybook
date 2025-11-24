@@ -4,6 +4,7 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
+import CommonLoader from '@/components/CommonLoader';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -129,7 +130,7 @@ export default function LoginPage() {
                                         <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
                                             <div className="_social_login_form_btn _mar_t40 _mar_b60">
                                                 <button type="submit" className="_social_login_form_btn_link _btn1" disabled={loading}>
-                                                    {loading ? 'Signing in...' : 'Login now'}
+                                                    {loading ? <CommonLoader text='Login' /> : 'Login'}
                                                 </button>
                                             </div>
                                         </div>
