@@ -262,7 +262,7 @@ export default function FeedPage() {
                                                         color: '#999',
                                                         fontSize: '14px'
                                                     }}>
-                                                        🎉 You're all caught up!
+                                                        🎉 You&apos;re all caught up!
                                                     </div>
                                                 )}
 

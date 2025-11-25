@@ -139,7 +139,7 @@ export default function LoginPage() {
                                 <div className="row">
                                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                                         <div className="_social_login_bottom_txt">
-                                            <p className="_social_login_bottom_txt_para">Don't have an account? <Link href="/register">Create New Account</Link>
+                                            <p className="_social_login_bottom_txt_para">Don&apos;t have an account? <Link href="/register">Create New Account</Link>
                                             </p>
                                         </div>
                                     </div>
