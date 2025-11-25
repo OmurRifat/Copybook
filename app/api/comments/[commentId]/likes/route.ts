@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 // GET /api/comments/[commentId]/likes - Get users who liked a comment
 export async function GET(
     request: NextRequest,
-    { params }: { params: { commentId: string } }
+    { params }: { params: Promise<{ commentId: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -15,7 +15,7 @@ export async function GET(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { commentId } = params;
+        const { commentId } = await params;
 
         const likes = await prisma.commentLike.findMany({
             where: { commentId },

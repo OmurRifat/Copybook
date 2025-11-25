@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 // POST /api/posts/[postId]/like - Like a post
 export async function POST(
     request: NextRequest,
-    { params }: { params: { postId: string } }
+    { params }: { params: Promise<{ postId: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -23,7 +23,7 @@ export async function POST(
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        const { postId } = params;
+        const { postId } = await params;
 
         // Check if post exists
         const post = await prisma.post.findUnique({
@@ -44,6 +44,10 @@ export async function POST(
 
         return NextResponse.json({ success: true, like }, { status: 201 });
     } catch (error: any) {
+        // Handle unique constraint violation (already liked)
+        if (error.code === 'P2002') {
+            return NextResponse.json({ error: 'Already liked' }, { status: 400 });
+        }
         console.error('Error liking post:', error);
         return NextResponse.json({ error: 'Failed to like post' }, { status: 500 });
     }
@@ -52,7 +56,7 @@ export async function POST(
 // DELETE /api/posts/[postId]/like - Unlike a post
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { postId: string } }
+    { params }: { params: Promise<{ postId: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -69,7 +73,7 @@ export async function DELETE(
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        const { postId } = params;
+        const { postId } = await params;
 
         // Delete the like
         await prisma.postLike.deleteMany({

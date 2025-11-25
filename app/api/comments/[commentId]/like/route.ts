@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 // POST /api/comments/[commentId]/like - Like a comment
 export async function POST(
     request: NextRequest,
-    { params }: { params: { commentId: string } }
+    { params }: { params: Promise<{ commentId: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -23,7 +23,7 @@ export async function POST(
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        const { commentId } = params;
+        const { commentId } = await params;
 
         // Check if comment exists
         const comment = await prisma.comment.findUnique({
@@ -56,7 +56,7 @@ export async function POST(
 // DELETE /api/comments/[commentId]/like - Unlike a comment
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { commentId: string } }
+    { params }: { params: Promise<{ commentId: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -73,7 +73,7 @@ export async function DELETE(
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        const { commentId } = params;
+        const { commentId } = await params;
 
         // Delete the like
         await prisma.commentLike.deleteMany({

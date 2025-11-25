@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 // GET /api/posts/[postId]/comments - Get comments for a post
 export async function GET(
     request: NextRequest,
-    { params }: { params: { postId: string } }
+    { params }: { params: Promise<{ postId: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -15,7 +15,7 @@ export async function GET(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { postId } = params;
+        const { postId } = await params;
 
         // Get current user
         const user = await prisma.user.findUnique({
