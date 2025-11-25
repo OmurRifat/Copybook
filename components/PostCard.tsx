@@ -47,7 +47,6 @@ function PostCard({
         const previousLiked = liked;
         const previousCount = likeCount;
 
-        // Optimistic update
         setLiked(!liked);
         setLikeCount(liked ? likeCount - 1 : likeCount + 1);
 
@@ -159,7 +158,6 @@ function PostCard({
         const previousLiked = currentState.liked;
         const previousCount = currentState.count;
 
-        // Optimistic update
         setCommentLikes(prev => ({
             ...prev,
             [commentId]: {
@@ -174,7 +172,6 @@ function PostCard({
             });
 
             if (!response.ok) {
-                // Revert on error
                 setCommentLikes(prev => ({
                     ...prev,
                     [commentId]: { liked: previousLiked, count: previousCount }
@@ -182,7 +179,6 @@ function PostCard({
             }
         } catch (error) {
             console.error('Error toggling comment like:', error);
-            // Revert on error
             setCommentLikes(prev => ({
                 ...prev,
                 [commentId]: { liked: previousLiked, count: previousCount }

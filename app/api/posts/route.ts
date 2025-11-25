@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
         // Add cursor condition if provided
         if (cursor) {
-            whereClause.id = { lt: cursor }; // Get posts with ID less than cursor (older posts)
+            whereClause.id = { lt: cursor };
         }
 
         // Fetch posts with pagination
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
             orderBy: {
                 createdAt: 'desc'
             },
-            take: limit + 1 // Fetch one extra to determine if there are more
+            take: limit + 1
         });
 
         // Check if there are more posts

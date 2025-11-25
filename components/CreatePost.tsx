@@ -88,7 +88,6 @@ export default function CreatePost({ onPostCreated }: { onPostCreated?: (post: a
 
             const newPost = await response.json();
 
-            // Calling remove image function to free up memory
             removeImage();
             setContent('');
 
@@ -134,7 +133,6 @@ export default function CreatePost({ onPostCreated }: { onPostCreated?: (post: a
                 </div>
             </div>
 
-            {/* Image Preview */}
             {previewUrl && (
                 <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
                     <img src={previewUrl} alt="Preview" style={{ maxHeight: '200px', borderRadius: '8px' }} />
@@ -159,7 +157,6 @@ export default function CreatePost({ onPostCreated }: { onPostCreated?: (post: a
                 </div>
             )}
 
-            {/* Hidden File Input */}
             <input
                 type="file"
                 ref={fileInputRef}
@@ -168,7 +165,6 @@ export default function CreatePost({ onPostCreated }: { onPostCreated?: (post: a
                 accept="image/*"
             />
 
-            {/* Desktop Buttons */}
             <div className="_feed_inner_text_area_bottom">
                 <div className="_feed_inner_text_area_item">
                     <div className="_feed_inner_text_area_bottom_photo _feed_common">
@@ -211,7 +207,6 @@ export default function CreatePost({ onPostCreated }: { onPostCreated?: (post: a
                 </div>
             </div>
 
-            {/* Mobile Buttons */}
             <div className="_feed_inner_text_area_bottom_mobile">
                 <div className="_feed_inner_text_mobile">
                     <div className="_feed_inner_text_area_item">

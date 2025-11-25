@@ -21,7 +21,7 @@ export default function RootLayout({
                 <link rel="stylesheet" href="/css/main.css" />
                 <link rel="stylesheet" href="/css/responsive.css" />
             </head>
-            <body>
+            <body suppressHydrationWarning={true}>
                 <Providers>{children}</Providers>
             </body>
         </html>
